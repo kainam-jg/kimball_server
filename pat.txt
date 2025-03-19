@@ -1,0 +1,7 @@
+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
+
+
+git clone https://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@github.com/kainam-jg/kimball_server.git kimball_server
+
+git clone https://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@github.com/kainam-jg/kimball_web.git kimball_web
+
