@@ -1,13 +1,5 @@
 {
     "API_TOKEN": "r_mKmvKvsqvZncXY7-XoVzRIeBaXiKypxe6AyRR8xO8",
-    "POSTGRES": {
-        "HOST": "35.238.78.34",
-        "PORT": 5432,
-        "USER": "postgres",
-        "PASSWORD": "atq=M#S-T\"Onv5.K",
-        "DATABASE": "thg",
-        "SCHEMA": "senna_repo"
-    },
     "UPLOAD_DIR": "/home/jgillespie/uploads",
     "CHUNK_DIR": "/home/jgillespie/uploads/chunks",
     "DEBUG": true
