@@ -2,6 +2,7 @@ import os
 import subprocess
 import logging
 from fastapi import APIRouter, Depends, HTTPException
+from typing import Dict
 from config import verify_auth, get_upload_dir
 
 router = APIRouter()
@@ -19,46 +20,44 @@ file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
 @router.post("/load_data/")
-async def load_csv_data(auth: bool = Depends(verify_auth)):
+async def load_csv_data(table_data: Dict[str, Dict], auth: bool = Depends(verify_auth)):
     """
     Loads CSV data into ClickHouse tables using clickhouse-client.
     """
     upload_dir = get_upload_dir()
 
     try:
-        # ✅ Get list of all CSV files in upload directory
-        csv_files = [f for f in os.listdir(upload_dir) if f.endswith(".csv")]
+        # ✅ Log the received JSON data
+        logger.info(f"📥 Received JSON Payload: {table_data}")
 
-        if not csv_files:
-            logger.info("❌ No CSV files found for loading.")
-            return {"message": "No CSV files found for loading"}
+        if not table_data or "groups" not in table_data:
+            logger.error("❌ Received invalid or empty JSON payload!")
+            raise HTTPException(status_code=400, detail="Empty or invalid JSON payload received.")
 
-        for filename in csv_files:
-            table_name = os.path.splitext(filename)[0]  # Remove .csv extension
-            file_path = os.path.join(upload_dir, filename)
+        for group in table_data["groups"]:
+            table_name = group["group"]  # ✅ Get the table name from the JSON payload
+            files = group.get("files", [])
 
-            # ✅ Properly escape the table name and file path
-            escaped_table_name = f"`{table_name}`"
-            escaped_file_path = f"'{file_path}'"  # Single quote the entire path for shell
+            for filename in files:
+                file_path = os.path.join(upload_dir, filename)
+                logger.info(f"📤 Loading {filename} into table {table_name}...")
 
-            logger.info(f"📤 Loading {filename} into table {escaped_table_name}...")
+                # ✅ Construct the load command
+                load_cmd = f'clickhouse-client -q "INSERT INTO {table_name} FORMAT CSVWithNames" < "{file_path}"'
+                logger.info(f"🛠️ Executing load command: {load_cmd}")
 
-            # ✅ Construct the load command
-            load_cmd = f'clickhouse-client -q "INSERT INTO {escaped_table_name} FORMAT CSVWithNames" < {escaped_file_path}'
-            logger.info(f"🛠️ Executing load command: {load_cmd}")
+                try:
+                    process = subprocess.run(load_cmd, shell=True, text=True, capture_output=True)
 
-            try:
-                process = subprocess.run(load_cmd, shell=True, text=True, capture_output=True)
+                    if process.returncode != 0:
+                        logger.error(f"❌ Failed to load {filename}: {process.stderr}")
+                        raise HTTPException(status_code=500, detail=f"Error loading {filename}: {process.stderr}")
 
-                if process.returncode != 0:
-                    logger.error(f"❌ Failed to load {filename}: {process.stderr}")
-                    raise HTTPException(status_code=500, detail=f"Error loading {filename}: {process.stderr}")
+                    logger.info(f"✅ Successfully loaded {filename} into {table_name}")
 
-                logger.info(f"✅ Successfully loaded {filename} into {escaped_table_name}")
-
-            except subprocess.CalledProcessError as e:
-                logger.error(f"❌ Command failed for {filename}: {e}")
-                raise HTTPException(status_code=500, detail=f"Command failed for {filename}: {str(e)}")
+                except subprocess.CalledProcessError as e:
+                    logger.error(f"❌ Command failed for {filename}: {e}")
+                    raise HTTPException(status_code=500, detail=f"Command failed for {filename}: {str(e)}")
 
         return {"message": "✅ All CSV files loaded successfully"}
 
