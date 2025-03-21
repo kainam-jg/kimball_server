@@ -65,11 +65,11 @@ async def drop_and_create_table(table_data: TableData, auth: bool = Depends(veri
             # ✅ Log the prepared commands (commented out execution for now)
             try:
                 # Uncomment these lines to execute the commands
-                # subprocess.run(["clickhouse-client", "-q", drop_query], check=True, shell=False)
-                # logger.info(f"✅ Successfully dropped table {table_name}")
+                subprocess.run(["clickhouse-client", "-q", drop_query], check=True, shell=False)
+                logger.info(f"✅ Successfully dropped table {table_name}")
 
-                # subprocess.run(["clickhouse-client", "-q", create_query], check=True, shell=False)
-                # logger.info(f"✅ Successfully created table {table_name}")
+                subprocess.run(["clickhouse-client", "-q", create_query], check=True, shell=False)
+                logger.info(f"✅ Successfully created table {table_name}")
 
                 logger.info(f"✔️ Successfully generated ClickHouse commands for table {table_name}")
 
