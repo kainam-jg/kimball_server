@@ -34,7 +34,7 @@ async def load_csv_data(auth: bool = Depends(verify_auth)):
             return {"message": "No CSV files found for loading"}
 
         for filename in csv_files:
-            table_name = os.path.splitext(filename)[0]  # Remove .csv extension
+            table_name = os.path.splitext(filename)[0].replace(" ", "_")  # Replace spaces with underscores
             file_path = os.path.join(upload_dir, filename)
 
             logger.info(f"📤 Loading {filename} into table {table_name}...")
