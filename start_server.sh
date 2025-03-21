@@ -10,6 +10,10 @@ LOG_FILE="$LOG_DIR/server.log"
 # Ensure log directory exists
 mkdir -p "$LOG_DIR"
 
+# Clear all logs from the log directory
+echo "Clearing existing logs from $LOG_DIR..."
+rm -f "$LOG_DIR"/*.log
+
 # Start FastAPI server with Uvicorn, running in the background and logging output
 echo "Starting FastAPI server on $HOST:$PORT..."
 nohup uvicorn "$APP_MODULE" --host "$HOST" --port "$PORT" --reload > "$LOG_FILE" 2>&1 &
