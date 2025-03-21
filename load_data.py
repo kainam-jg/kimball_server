@@ -34,13 +34,17 @@ async def load_csv_data(auth: bool = Depends(verify_auth)):
             return {"message": "No CSV files found for loading"}
 
         for filename in csv_files:
-            table_name = os.path.splitext(filename)[0].replace(" ", "_")  # Replace spaces with underscores
+            table_name = os.path.splitext(filename)[0]  # Remove .csv extension
             file_path = os.path.join(upload_dir, filename)
 
-            logger.info(f"📤 Loading {filename} into table {table_name}...")
+            # ✅ Properly escape the table name and file path
+            escaped_table_name = f"`{table_name}`"
+            escaped_file_path = f"'{file_path}'"  # Single quote the entire path for shell
+
+            logger.info(f"📤 Loading {filename} into table {escaped_table_name}...")
 
             # ✅ Construct the load command
-            load_cmd = f'clickhouse-client -q "INSERT INTO `{table_name}` FORMAT CSVWithNames" < "{file_path}"'
+            load_cmd = f'clickhouse-client -q "INSERT INTO {escaped_table_name} FORMAT CSVWithNames" < {escaped_file_path}'
             logger.info(f"🛠️ Executing load command: {load_cmd}")
 
             try:
@@ -50,7 +54,7 @@ async def load_csv_data(auth: bool = Depends(verify_auth)):
                     logger.error(f"❌ Failed to load {filename}: {process.stderr}")
                     raise HTTPException(status_code=500, detail=f"Error loading {filename}: {process.stderr}")
 
-                logger.info(f"✅ Successfully loaded {filename} into {table_name}")
+                logger.info(f"✅ Successfully loaded {filename} into {escaped_table_name}")
 
             except subprocess.CalledProcessError as e:
                 logger.error(f"❌ Command failed for {filename}: {e}")
