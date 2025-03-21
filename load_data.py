@@ -1,8 +1,7 @@
 import os
 import subprocess
 import logging
-from fastapi import APIRouter, Depends, HTTPException
-from typing import Dict
+from fastapi import APIRouter, Depends, HTTPException, Request
 from config import verify_auth, get_upload_dir
 
 router = APIRouter()
@@ -20,19 +19,24 @@ file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
 @router.post("/load_data/")
-async def load_csv_data(table_data: Dict[str, Dict], auth: bool = Depends(verify_auth)):
+async def load_csv_data(request: Request, auth: bool = Depends(verify_auth)):
     """
     Loads CSV data into ClickHouse tables using clickhouse-client.
     """
-    upload_dir = get_upload_dir()
-
     try:
-        # ✅ Log the received JSON data
-        logger.info(f"📥 Received JSON Payload: {table_data}")
+        # ✅ Log raw request body
+        raw_body = await request.body()
+        logger.info(f"📥 Raw Request Body: {raw_body.decode('utf-8')}")
+
+        # ✅ Parse the JSON body
+        table_data = await request.json()
+        logger.info(f"✅ Parsed JSON: {table_data}")
 
         if not table_data or "groups" not in table_data:
             logger.error("❌ Received invalid or empty JSON payload!")
             raise HTTPException(status_code=400, detail="Empty or invalid JSON payload received.")
+
+        upload_dir = get_upload_dir()
 
         for group in table_data["groups"]:
             table_name = group["group"]  # ✅ Get the table name from the JSON payload
