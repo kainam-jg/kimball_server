@@ -5,9 +5,9 @@ from collections import defaultdict
 from sse_starlette.sse import EventSourceResponse
 import json
 import asyncio
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from fastapi import APIRouter, Depends, HTTPException, Request
-from config import API_TOKEN, get_upload_dir, verify_auth, is_debug
+from concurrent.futures import ThreadPoolExecutor
+from fastapi import APIRouter, Request
+from config import API_TOKEN, get_upload_dir, is_debug
 
 router = APIRouter()
 
@@ -22,17 +22,14 @@ formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
-# ✅ Set batch size and number of workers
-BATCH_SIZE = 1_000_000
 MAX_WORKERS = 4
 
 def get_headers(file_path):
-    """Extract headers from a CSV file."""
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             reader = csv.reader(f)
-            headers = tuple(next(reader))  # Extract headers from the first row
-            row_count = sum(1 for _ in reader)  # Count the remaining rows
+            headers = tuple(next(reader))
+            row_count = sum(1 for _ in reader)
         logger.info(f"✅ Extracted headers from {file_path} with {row_count} rows")
         return headers, row_count
     except Exception as e:
@@ -42,7 +39,7 @@ def get_headers(file_path):
 @router.get("/group_csvs_stream/")
 async def group_csvs_stream(request: Request):
     token = request.query_params.get("token")
-    if token != f"Bearer {API_TOKEN}":
+    if token != API_TOKEN:
         async def error_event():
             yield {"event": "error", "data": "Invalid API Token"}
         return EventSourceResponse(error_event())
@@ -51,9 +48,9 @@ async def group_csvs_stream(request: Request):
     files = [f for f in os.listdir(upload_dir) if f.endswith(".csv")]
 
     if not files:
-        async def no_files_event():
+        async def error_event():
             yield {"event": "error", "data": "No CSV files found"}
-        return EventSourceResponse(no_files_event())
+        return EventSourceResponse(error_event())
 
     grouped_files = defaultdict(list)
     total_row_count = defaultdict(int)
@@ -62,7 +59,6 @@ async def group_csvs_stream(request: Request):
         yield {"event": "start", "data": f"Starting to process {len(files)} files."}
 
         loop = asyncio.get_event_loop()
-
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
             futures = {
                 loop.run_in_executor(executor, get_headers, os.path.join(upload_dir, f)): f
@@ -93,10 +89,9 @@ async def group_csvs_stream(request: Request):
         ]
 
         if is_debug():
-            logger.info("📥 DEBUG: Final group output:")
-            logger.info(json.dumps(grouped_output, indent=2))
+            logger.info(f"📥 DEBUG: Final grouped_output: {json.dumps(grouped_output, indent=2)}")
 
         yield {"event": "complete", "data": json.dumps({"groups": grouped_output})}
-        yield {"event": "done", "data": "Grouping finished."}
+        yield {"event": "done", "data": "✔️ Grouping complete. You may now proceed."}
 
     return EventSourceResponse(event_generator())
