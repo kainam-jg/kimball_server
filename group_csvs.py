@@ -2,6 +2,8 @@ import os
 import csv
 import logging
 from collections import defaultdict
+from sse_starlette.sse import EventSourceResponse
+import asyncio
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from fastapi import APIRouter, Depends, HTTPException
 from config import get_upload_dir, verify_auth, is_debug
@@ -88,3 +90,58 @@ async def group_csvs(auth: bool = Depends(verify_auth)):
     except Exception as e:
         logger.error(f"❌ Error during CSV grouping: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
+    
+@router.get("/group_csvs_stream/")
+async def group_csvs_stream(auth: bool = Depends(verify_auth)):
+    """
+    Streams progress updates while grouping CSVs using Server-Sent Events (SSE).
+    """
+    upload_dir = get_upload_dir()
+    files = [f for f in os.listdir(upload_dir) if f.endswith(".csv")]
+
+    if not files:
+        yield {"event": "error", "data": "No CSV files found"}
+        return
+
+    grouped_files = defaultdict(list)
+    total_row_count = defaultdict(int)
+
+    async def event_generator():
+        yield {"event": "start", "data": f"Starting to process {len(files)} files."}
+
+        loop = asyncio.get_event_loop()
+
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+            futures = {loop.run_in_executor(executor, get_headers, os.path.join(upload_dir, f)): f for f in files}
+
+            for coro in asyncio.as_completed(futures):
+                file = futures[coro]
+                try:
+                    headers, row_count = await coro
+                    if headers:
+                        grouped_files[headers].append(file)
+                        total_row_count[headers] += row_count
+                        yield {"event": "progress", "data": f"✅ Finished: {file}"}
+                    else:
+                        yield {"event": "progress", "data": f"❌ Failed: {file}"}
+                except Exception as e:
+                    yield {"event": "progress", "data": f"❌ Error: {file} - {str(e)}"}
+
+        # Format the final JSON payload
+        grouped_output = [
+            {
+                "group": f"filegroup_{i+1}",
+                "files": files,
+                "headers": list(headers),
+                "total_row_count": total_row_count[headers]
+            }
+            for i, (headers, files) in enumerate(grouped_files.items())
+        ]
+
+        if is_debug():
+            logger.info(f"📥 DEBUG: Final group output: {grouped_output}")
+
+        yield {"event": "complete", "data": json.dumps({"groups": grouped_output})}
+
+    return EventSourceResponse(event_generator())
+
