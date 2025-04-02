@@ -90,5 +90,7 @@ async def group_csvs_stream(request: Request):
             logger.info(f"📥 DEBUG: Final group output: {grouped_output}")
 
         yield {"event": "complete", "data": json.dumps({"groups": grouped_output})}
+        #yield {}  # This will gracefully close the stream        
+        yield {"event": "done", "data": "[[STREAM_CLOSED]]"}
 
     return EventSourceResponse(event_generator())
