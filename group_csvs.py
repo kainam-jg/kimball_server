@@ -38,25 +38,28 @@ def get_headers(file_path):
 
 @router.get("/group_csvs_stream/")
 async def group_csvs_stream(request: Request):
-    async def event_generator():
-        token = request.query_params.get("token")
-        if token != f"Bearer {API_TOKEN}":
+    token = request.query_params.get("token")
+    if token != f"Bearer {API_TOKEN}":
+        async def error_event():
             yield {"event": "error", "data": "Invalid API Token"}
-            return
+        return EventSourceResponse(error_event())
 
-        upload_dir = get_upload_dir()
-        files = [f for f in os.listdir(upload_dir) if f.endswith(".csv")]
+    upload_dir = get_upload_dir()
+    files = [f for f in os.listdir(upload_dir) if f.endswith(".csv")]
 
-        if not files:
+    if not files:
+        async def error_event():
             yield {"event": "error", "data": "No CSV files found"}
-            return
+        return EventSourceResponse(error_event())
 
-        grouped_files = defaultdict(list)
-        total_row_count = defaultdict(int)
+    grouped_files = defaultdict(list)
+    total_row_count = defaultdict(int)
 
+    async def event_generator():
         yield {"event": "start", "data": f"Starting to process {len(files)} files."}
 
         loop = asyncio.get_event_loop()
+
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
             futures = {
                 loop.run_in_executor(executor, get_headers, os.path.join(upload_dir, f)): f
@@ -76,6 +79,7 @@ async def group_csvs_stream(request: Request):
                 except Exception as e:
                     yield {"event": "progress", "data": f"❌ Error: {file} - {str(e)}"}
 
+        # Format the final JSON payload
         grouped_output = [
             {
                 "group": f"filegroup_{i+1}",
@@ -87,10 +91,11 @@ async def group_csvs_stream(request: Request):
         ]
 
         if is_debug():
-            logger.info(f"📥 DEBUG: Final group output: {grouped_output}")
+            logger.info(f"📥 DEBUG: Final group output:\n{json.dumps(grouped_output, indent=2)}")
 
         yield {"event": "complete", "data": json.dumps({"groups": grouped_output})}
-        #yield {}  # This will gracefully close the stream        
-        yield {"event": "done", "data": "[[STREAM_CLOSED]]"}
+
+        # This ensures the stream is closed cleanly
+        yield {"event": "done", "data": "✅ All processing complete."}
 
     return EventSourceResponse(event_generator())
