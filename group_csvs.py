@@ -6,8 +6,8 @@ from sse_starlette.sse import EventSourceResponse
 import json
 import asyncio
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from fastapi import APIRouter, Depends, HTTPException
-from config import get_upload_dir, verify_auth, is_debug
+from fastapi import APIRouter, Depends, HTTPException, Request
+from config import API_TOKEN, get_upload_dir, verify_auth, is_debug
 
 router = APIRouter()
 
@@ -91,12 +91,16 @@ def get_headers(file_path):
 #    except Exception as e:
 #        logger.error(f"❌ Error during CSV grouping: {e}")
 #        raise HTTPException(status_code=500, detail="Internal Server Error")
-    
+#@router.get("/group_csvs_stream/")
+#async def group_csvs_stream(auth: bool = Depends(verify_auth)):
+
 @router.get("/group_csvs_stream/")
-async def group_csvs_stream(auth: bool = Depends(verify_auth)):
-    """
-    Streams progress updates while grouping CSVs using Server-Sent Events (SSE).
-    """
+async def group_csvs_stream(request: Request):
+    token = request.query_params.get("token")
+    if token != f"Bearer {API_TOKEN}":
+        yield {"event": "error", "data": "Invalid API Token"}
+        return
+
     upload_dir = get_upload_dir()
     files = [f for f in os.listdir(upload_dir) if f.endswith(".csv")]
 
