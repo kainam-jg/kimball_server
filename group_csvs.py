@@ -5,7 +5,7 @@ from collections import defaultdict
 from sse_starlette.sse import EventSourceResponse
 import json
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from fastapi import APIRouter, Depends, HTTPException, Request
 from config import API_TOKEN, get_upload_dir, verify_auth, is_debug
 
@@ -14,6 +14,7 @@ router = APIRouter()
 LOG_FILE = "logs/group_csvs.log"
 os.makedirs("logs", exist_ok=True)
 
+# ✅ Set up a custom logger
 logger = logging.getLogger("group_csvs")
 logger.setLevel(logging.INFO)
 file_handler = logging.FileHandler(LOG_FILE)
@@ -21,15 +22,17 @@ formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
+# ✅ Set batch size and number of workers
 BATCH_SIZE = 1_000_000
 MAX_WORKERS = 4
 
 def get_headers(file_path):
+    """Extract headers from a CSV file."""
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             reader = csv.reader(f)
-            headers = tuple(next(reader))
-            row_count = sum(1 for _ in reader)
+            headers = tuple(next(reader))  # Extract headers from the first row
+            row_count = sum(1 for _ in reader)  # Count the remaining rows
         logger.info(f"✅ Extracted headers from {file_path} with {row_count} rows")
         return headers, row_count
     except Exception as e:
@@ -48,9 +51,9 @@ async def group_csvs_stream(request: Request):
     files = [f for f in os.listdir(upload_dir) if f.endswith(".csv")]
 
     if not files:
-        async def error_event():
+        async def no_files_event():
             yield {"event": "error", "data": "No CSV files found"}
-        return EventSourceResponse(error_event())
+        return EventSourceResponse(no_files_event())
 
     grouped_files = defaultdict(list)
     total_row_count = defaultdict(int)
@@ -79,7 +82,6 @@ async def group_csvs_stream(request: Request):
                 except Exception as e:
                     yield {"event": "progress", "data": f"❌ Error: {file} - {str(e)}"}
 
-        # Format the final JSON payload
         grouped_output = [
             {
                 "group": f"filegroup_{i+1}",
@@ -91,11 +93,10 @@ async def group_csvs_stream(request: Request):
         ]
 
         if is_debug():
-            logger.info(f"📥 DEBUG: Final group output:\n{json.dumps(grouped_output, indent=2)}")
+            logger.info("📥 DEBUG: Final group output:")
+            logger.info(json.dumps(grouped_output, indent=2))
 
         yield {"event": "complete", "data": json.dumps({"groups": grouped_output})}
-
-        # This ensures the stream is closed cleanly
-        yield {"event": "done", "data": "✅ All processing complete."}
+        yield {"event": "done", "data": "Grouping finished."}
 
     return EventSourceResponse(event_generator())
