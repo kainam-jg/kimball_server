@@ -3,6 +3,7 @@ import csv
 import logging
 from collections import defaultdict
 from sse_starlette.sse import EventSourceResponse
+import json
 import asyncio
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from fastapi import APIRouter, Depends, HTTPException
@@ -100,8 +101,10 @@ async def group_csvs_stream(auth: bool = Depends(verify_auth)):
     files = [f for f in os.listdir(upload_dir) if f.endswith(".csv")]
 
     if not files:
-        yield {"event": "error", "data": "No CSV files found"}
-        return
+        # Note: You cannot yield outside the generator. Handle inside.
+        async def error_event():
+            yield {"event": "error", "data": "No CSV files found"}
+        return EventSourceResponse(error_event)
 
     grouped_files = defaultdict(list)
     total_row_count = defaultdict(int)
@@ -112,7 +115,10 @@ async def group_csvs_stream(auth: bool = Depends(verify_auth)):
         loop = asyncio.get_event_loop()
 
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-            futures = {loop.run_in_executor(executor, get_headers, os.path.join(upload_dir, f)): f for f in files}
+            futures = {
+                loop.run_in_executor(executor, get_headers, os.path.join(upload_dir, f)): f
+                for f in files
+            }
 
             for coro in asyncio.as_completed(futures):
                 file = futures[coro]
@@ -143,5 +149,4 @@ async def group_csvs_stream(auth: bool = Depends(verify_auth)):
 
         yield {"event": "complete", "data": json.dumps({"groups": grouped_output})}
 
-    return EventSourceResponse(event_generator())
-
+    return EventSourceResponse(event_generator)
