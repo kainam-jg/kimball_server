@@ -15,12 +15,16 @@ from config import (
 router = APIRouter()
 LOG_FILE = "logs/upload.log"
 
+# Ensure log directory exists
 os.makedirs("logs", exist_ok=True)
 
+# Set up logging
 logging.basicConfig(filename=LOG_FILE, level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+
 
 @router.post("/initialize_upload/")
 async def initialize_upload(file: UploadFile = File(...), auth: bool = Depends(verify_auth)):
+    """Initializes an upload session and logs the start time."""
     session_token = str(uuid.uuid4())
     session_base_dir = os.path.join(get_upload_dir(), session_token)
     chunks_dir = os.path.join(session_base_dir, "chunks")
@@ -34,6 +38,7 @@ async def initialize_upload(file: UploadFile = File(...), auth: bool = Depends(v
     with open(file_path, "wb") as f:
         f.write(await file.read())
 
+    # Log to ClickHouse
     start_time = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
     log_query = f"""
         INSERT INTO default.file_upload_log (session_token, file_name, start_time)
@@ -48,6 +53,7 @@ async def initialize_upload(file: UploadFile = File(...), auth: bool = Depends(v
         "message": "Upload session initialized"
     }
 
+
 @router.post("/upload_chunk/")
 async def upload_chunk(
     file: UploadFile = File(...), 
@@ -57,6 +63,7 @@ async def upload_chunk(
     session_token: str = Form(...),
     auth: bool = Depends(verify_auth)
 ):
+    """Handles individual file chunks."""
     chunk_path = os.path.join(get_chunk_dir(session_token), f"{filename}.part{chunk_number}")
 
     with open(chunk_path, "wb") as buffer:
@@ -68,6 +75,7 @@ async def upload_chunk(
     logging.info(f"✅ Uploaded chunk {chunk_number}/{total_chunks} for {filename} in session {session_token}")
     return {"message": f"Chunk {chunk_number}/{total_chunks} uploaded successfully"}
 
+
 @router.post("/finalize_upload/")
 async def finalize_upload(
     filename: str = Form(...),
@@ -75,6 +83,7 @@ async def finalize_upload(
     session_token: str = Form(...),
     auth: bool = Depends(verify_auth)
 ):
+    """Merges all file chunks into one final file and logs the completion."""
     final_path = os.path.join(get_upload_dir(session_token), filename)
 
     with open(final_path, "wb") as final_file:
@@ -89,6 +98,7 @@ async def finalize_upload(
 
             os.remove(chunk_path)
 
+    # Log end time to ClickHouse
     end_time = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
     log_query = f"""
         ALTER TABLE default.file_upload_log
