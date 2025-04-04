@@ -1,9 +1,11 @@
 import json
 import os
-import requests
+import subprocess
+import logging
 from fastapi import HTTPException, Header
 
 CONFIG_FILE = "config.json"
+logger = logging.getLogger(__name__)
 
 def load_config():
     """Load configuration from config.json."""
@@ -42,15 +44,19 @@ def verify_auth(authorization: str = Header(None)):
     return True
 
 def log_to_clickhouse(query: str):
-    """Run an INSERT or UPDATE query against ClickHouse."""
+    """Execute a ClickHouse INSERT or UPDATE using clickhouse-client."""
     try:
-        url = f"http://{CLICKHOUSE['host']}:{CLICKHOUSE['port']}/"
-        response = requests.post(
-            url,
-            data=query.encode('utf-8'),
-            headers={'Content-Type': 'text/plain'}
-        )
-        if response.status_code != 200:
-            print(f"ClickHouse logging failed: {response.text}")
-    except Exception as e:
-        print(f"Exception during ClickHouse logging: {e}")
+        # Escape quotes inside query
+        escaped_query = query.replace('"', '\\"')
+        cmd = f'clickhouse-client -q "{escaped_query}"'
+
+        logger.info(f"🛠️ Executing ClickHouse log command: {cmd}")
+        process = subprocess.run(cmd, shell=True, text=True, capture_output=True)
+
+        if process.returncode != 0:
+            logger.error(f"❌ ClickHouse log failed: {process.stderr}")
+        else:
+            logger.info("✅ ClickHouse log successful.")
+
+    except subprocess.CalledProcessError as e:
+        logger.error(f"❌ ClickHouse logging exception: {e}")
