@@ -1,5 +1,6 @@
 import json
 import os
+import requests
 from fastapi import HTTPException, Header
 
 CONFIG_FILE = "config.json"
@@ -14,31 +15,42 @@ def load_config():
 
 config = load_config()
 API_TOKEN = config.get("API_TOKEN")
-UPLOAD_DIR = config.get("UPLOAD_DIR", "/tmp/uploads")
-CHUNK_DIR = config.get("CHUNK_DIR", "/tmp/uploads/chunks")
-DEBUG = config.get("DEBUG", False)  # ✅ Read debug flag from config.json
+UPLOAD_ROOT = config.get("UPLOAD_DIR", "/tmp/uploads")
+DEBUG = config.get("DEBUG", False)
+CLICKHOUSE = config.get("clickhouse", {})
 
-if not API_TOKEN or not UPLOAD_DIR or not CHUNK_DIR:
+if not API_TOKEN or not UPLOAD_ROOT:
     raise ValueError("Missing required configurations in config.json")
 
-# Ensure directories exist
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-os.makedirs(CHUNK_DIR, exist_ok=True)
+# Ensure root directory exists
+os.makedirs(UPLOAD_ROOT, exist_ok=True)
 
-def get_upload_dir():
-    """Return upload directory from config."""
-    return UPLOAD_DIR
+def get_upload_dir(session_token: str = None):
+    return os.path.join(UPLOAD_ROOT, session_token) if session_token else UPLOAD_ROOT
 
-def get_chunk_dir():
-    """Return chunk directory from config."""
-    return CHUNK_DIR
+def get_chunk_dir(session_token: str = None):
+    if session_token:
+        return os.path.join(UPLOAD_ROOT, session_token, "chunks")
+    return os.path.join(UPLOAD_ROOT, "chunks")
 
 def is_debug():
-    """Return whether debug mode is enabled."""
     return DEBUG
 
 def verify_auth(authorization: str = Header(None)):
-    """Verify API authentication."""
     if authorization != f"Bearer {API_TOKEN}":
         raise HTTPException(status_code=403, detail="Invalid API Token")
     return True
+
+def log_to_clickhouse(query: str):
+    """Run an INSERT or UPDATE query against ClickHouse."""
+    try:
+        url = f"http://{CLICKHOUSE['host']}:{CLICKHOUSE['port']}/"
+        response = requests.post(
+            url,
+            data=query.encode('utf-8'),
+            headers={'Content-Type': 'text/plain'}
+        )
+        if response.status_code != 200:
+            print(f"ClickHouse logging failed: {response.text}")
+    except Exception as e:
+        print(f"Exception during ClickHouse logging: {e}")

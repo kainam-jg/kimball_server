@@ -1,6 +1,13 @@
 {
     "API_TOKEN": "r_mKmvKvsqvZncXY7-XoVzRIeBaXiKypxe6AyRR8xO8",
     "UPLOAD_DIR": "/home/jgillespie/uploads",
-    "CHUNK_DIR": "/home/jgillespie/uploads/chunks",
+    "clickhouse": {
+      "host": "localhost",
+      "port": 8123,
+      "username": "",
+      "password": "",
+      "database": "default"
+    },
     "DEBUG": true
-}
+  }
+  
