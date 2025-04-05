@@ -98,14 +98,5 @@ async def finalize_upload(
 
             os.remove(chunk_path)
 
-    # Log end time to ClickHouse
-    end_time = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
-    log_query = f"""
-        ALTER TABLE default.file_upload_log
-        UPDATE end_time = toDateTime('{end_time}')
-        WHERE session_token = '{session_token}' AND file_name = '{filename}'
-    """
-    log_to_clickhouse(log_query)
-
     logging.info(f"✅ Successfully merged {filename} in session {session_token}")
     return {"message": f"File '{filename}' successfully uploaded and merged"}
