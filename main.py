@@ -25,30 +25,30 @@ app.include_router(combined_router, prefix="/csv", tags=["Create and Load Tables
 app.include_router(cleanup_router, prefix="/internal", tags=["Cleanup"])
 
 # Background task to call cleanup API internally
-@app.on_event("startup")
-async def schedule_cleanup():
-    try:
-        with open("config.json", "r", encoding="utf-8") as f:
-            config = json.load(f)
-        interval = config.get("cleanup_interval_minutes", 10)
-    except Exception as e:
-        print(f"Failed to read config for cleanup schedule: {e}")
-        interval = 10
-
-    client = TestClient(app)
-
-    async def call_cleanup_loop():
-        await asyncio.sleep(5)  # Give FastAPI time to finish startup
-        while True:
-            try:
-                print("🔄 Calling cleanup internally...")
-                response = client.post("/internal/clean_upload_dirs/")
-                if response.status_code == 200:
-                    print("✅ Cleanup successful.")
-                else:
-                    print(f"❌ Cleanup failed: {response.status_code} - {response.text}")
-            except Exception as e:
-                print(f"Exception during scheduled cleanup: {e}")
-            await asyncio.sleep(interval * 60)
-
-    asyncio.create_task(call_cleanup_loop())
+#@app.on_event("startup")
+#async def schedule_cleanup():
+#    try:
+#        with open("config.json", "r", encoding="utf-8") as f:
+#            config = json.load(f)
+#        interval = config.get("cleanup_interval_minutes", 10)
+#    except Exception as e:
+#        print(f"Failed to read config for cleanup schedule: {e}")
+#        interval = 10
+#
+#    client = TestClient(app)
+#
+#    async def call_cleanup_loop():
+#        await asyncio.sleep(5)  # Give FastAPI time to finish startup
+#        while True:
+#            try:
+#                print("🔄 Calling cleanup internally...")
+#                response = client.post("/internal/clean_upload_dirs/")
+#                if response.status_code == 200:
+#                    print("✅ Cleanup successful.")
+#                else:
+#                    print(f"❌ Cleanup failed: {response.status_code} - {response.text}")
+#            except Exception as e:
+#                print(f"Exception during scheduled cleanup: {e}")
+#            await asyncio.sleep(interval * 60)
+#
+#    asyncio.create_task(call_cleanup_loop())
