@@ -80,6 +80,7 @@ async def create_and_load_tables(data: TableData, auth: bool = Depends(verify_au
 
         # Final log update for each file
         end_time = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+        logger.info(f"{file_to_tables}")
         for filename, table_list in file_to_tables.items():
             array_str = "[" + ", ".join(f"'{t}'" for t in table_list) + "]"
             update_query = f"""
