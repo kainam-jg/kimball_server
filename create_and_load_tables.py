@@ -93,7 +93,7 @@ async def create_and_load_tables(data: TableData, auth: bool = Depends(verify_au
                 ALTER TABLE default.file_upload_log 
                 UPDATE 
                     end_time = toDateTime('{end_time}'), 
-                    table_name = {file_to_tables} 
+                    table_name = {test_str} 
                 WHERE session_token = '{session_token}' AND file_name = '{filename}'
             """
             log_to_clickhouse(update_query)
