@@ -82,12 +82,12 @@ async def create_and_load_tables(data: TableData, auth: bool = Depends(verify_au
         end_time = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
         logger.info(f"{file_to_tables}")
         for filename, table_list in file_to_tables.items():
-            array_str = "[" + ", ".join(f"'{t}'" for t in table_list) + "]"
+            #array_str = "[" + ", ".join(f"'{t}'" for t in table_list) + "]"
             update_query = f"""
                 ALTER TABLE default.file_upload_log 
                 UPDATE 
                     end_time = toDateTime('{end_time}'), 
-                    table_name = {array_str} 
+                    table_name = {file_to_tables} 
                 WHERE session_token = '{session_token}' AND file_name = '{filename}'
             """
             log_to_clickhouse(update_query)
