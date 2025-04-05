@@ -79,8 +79,14 @@ async def create_and_load_tables(data: TableData, auth: bool = Depends(verify_au
                 file_to_tables[filename].append(table_name)
 
         # Final log update for each file
+        test_str = ""
+        for filename, table_names in file_to_tables.items():
+            # Ensure unique table names, remove duplicates
+            unique_tables = list(set(table_names))
+            test_str = "[" + ", ".join(f"'{t}'" for t in unique_tables) + "]"
+    
+        logger.info(f"{test_str}")
         end_time = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
-        logger.info(f"{file_to_tables}")
         for filename, table_list in file_to_tables.items():
             #array_str = "[" + ", ".join(f"'{t}'" for t in table_list) + "]"
             update_query = f"""
