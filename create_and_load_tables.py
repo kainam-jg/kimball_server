@@ -93,7 +93,7 @@ async def create_and_load_tables(data: TableData, auth: bool = Depends(verify_au
             ALTER TABLE default.file_upload_log 
             UPDATE 
                 end_time = toDateTime('{end_time}'),
-                table_names = {tables}
+                table_names = {tables},
                 file_names = {filenames}
             WHERE session_token = '{session_token}'
         """
