@@ -8,9 +8,9 @@ from fastapi import APIRouter, HTTPException
 router = APIRouter()
 
 # Setup logging
-LOG_FILE = "logs/cleanup_upload_dirs.log"
+LOG_FILE = "logs/clean_upload_dirs.log"
 os.makedirs("logs", exist_ok=True)
-logger = logging.getLogger("cleanup_upload_dirs")
+logger = logging.getLogger("clean_upload_dirs")
 logger.setLevel(logging.INFO)
 file_handler = logging.FileHandler(LOG_FILE)
 formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
@@ -33,8 +33,8 @@ CLICKHOUSE_PORT = CH_CONFIG.get("port", 8123)
 CLICKHOUSE_USER = CH_CONFIG.get("username", "default")
 CLICKHOUSE_PASS = CH_CONFIG.get("password", "")
 
-@router.post("/cleanup_upload_dirs/")
-async def cleanup_upload_dirs():
+@router.post("/clean_upload_dirs/")
+async def clean_upload_dirs():
     if not UPLOAD_DIR:
         logger.error("UPLOAD_DIR not configured")
         raise HTTPException(status_code=500, detail="UPLOAD_DIR not configured")
