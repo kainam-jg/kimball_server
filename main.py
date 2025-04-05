@@ -39,7 +39,7 @@ async def schedule_cleanup():
         while True:
             try:
                 print("🔄 Triggering periodic cleanup...")
-                response = requests.post("http://localhost:8000/internal/cleanup_upload_dirs/")
+                response = requests.post("http://localhost:8000/internal/clean_upload_dirs/")
                 if response.ok:
                     print("✅ Cleanup successful.")
                 else:
