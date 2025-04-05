@@ -28,7 +28,7 @@ class TableData(BaseModel):
     session_token: str
     groups: List[Group]
 
-@router.post("/csv/create_and_load_tables/")
+@router.post("/create_and_load_tables/")
 async def create_and_load_tables(data: TableData, auth: bool = Depends(verify_auth)):
     try:
         session_token = data.session_token
