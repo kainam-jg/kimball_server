@@ -80,20 +80,23 @@ async def create_and_load_tables(data: TableData, auth: bool = Depends(verify_au
 
         # Final log update for each file
         tables = []
+        filenames = []
         end_time = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
-        for filename, table_list in file_to_tables.items():
-            unique_tables = list(set(table_list))
+        for filename, table_names in file_to_tables.items():
+            # Ensure unique table names, remove duplicates
+            unique_tables = list(set(table_names))
             tables.append(unique_tables[0])
-            update_query = f"""
-                ALTER TABLE default.file_upload_log 
-                UPDATE 
-                    end_time = toDateTime('{end_time}'), 
-                    table_name = {tables} 
-                WHERE session_token = '{session_token}' AND file_name = '{filename}'
-            """
-            log_to_clickhouse(update_query)
-            logger.info(f"🕒 Logged end_time and table_name for {filename} in ClickHouse log")
-
+            filenames.append(filename)
+        update_query = f"""
+            ALTER TABLE default.file_upload_log 
+            UPDATE 
+                end_time = toDateTime('{end_time}'),
+                table_names = {tables}
+                file_names = {filenames}
+            WHERE session_token = '{session_token}'
+        """
+        log_to_clickhouse(update_query)
+        logger.info(f"🕒 Logged end_time and table_name for {filename} in ClickHouse log")
         return {"message": "✅ All tables created and data loaded successfully."}
 
     except Exception as e:

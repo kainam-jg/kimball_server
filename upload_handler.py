@@ -41,8 +41,8 @@ async def initialize_upload(file: UploadFile = File(...), auth: bool = Depends(v
     # Log to ClickHouse
     start_time = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
     log_query = f"""
-        INSERT INTO default.file_upload_log (session_token, file_name, start_time)
-        VALUES ('{session_token}', '{file.filename}', toDateTime('{start_time}'))
+        INSERT INTO default.file_upload_log (session_token, start_time)
+        VALUES ('{session_token}', toDateTime('{start_time}'))
     """
     log_to_clickhouse(log_query)
 
