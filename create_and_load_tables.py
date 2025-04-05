@@ -83,7 +83,7 @@ async def create_and_load_tables(data: TableData, auth: bool = Depends(verify_au
         for filename, table_names in file_to_tables.items():
             # Ensure unique table names, remove duplicates
             unique_tables = list(set(table_names))
-            test_str = "[" + ", ".join(f"'{t}'" for t in unique_tables) + "]"
+            test_str = test_str + "[" + ", ".join(f"'{t}'" for t in unique_tables) + "]"
     
         logger.info(f"{test_str}")
         end_time = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
