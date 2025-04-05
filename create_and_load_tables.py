@@ -79,22 +79,16 @@ async def create_and_load_tables(data: TableData, auth: bool = Depends(verify_au
                 file_to_tables[filename].append(table_name)
 
         # Final log update for each file
-        test_str = []
-        for filename, table_names in file_to_tables.items():
-            # Ensure unique table names, remove duplicates
-            unique_tables = list(set(table_names))
-            test_str.append(unique_tables[0])
-            #test_str = test_str + "[" + ", ".join(f"'{t}'" for t in unique_tables) + "]"
-    
-        logger.info(f"{test_str}")
+        tables = []
         end_time = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
         for filename, table_list in file_to_tables.items():
-            #array_str = "[" + ", ".join(f"'{t}'" for t in table_list) + "]"
+            unique_tables = list(set(table_list))
+            tables.append(unique_tables[0])
             update_query = f"""
                 ALTER TABLE default.file_upload_log 
                 UPDATE 
                     end_time = toDateTime('{end_time}'), 
-                    table_name = {test_str} 
+                    table_name = {tables} 
                 WHERE session_token = '{session_token}' AND file_name = '{filename}'
             """
             log_to_clickhouse(update_query)
