@@ -7,7 +7,7 @@ from clean_upload_dirs import router as cleanup_router
 
 import asyncio
 import json
-import requests
+from fastapi.testclient import TestClient
 
 app = FastAPI(title="FastAPI CSV Processing", description="Handles CSV uploads, grouping, and analysis.")
 
@@ -24,7 +24,7 @@ app.include_router(group_router, prefix="/csv", tags=["CSV Processing"])
 app.include_router(combined_router, prefix="/csv", tags=["Create and Load Tables"])
 app.include_router(cleanup_router, prefix="/internal", tags=["Cleanup"])
 
-# Background task to call cleanup API
+# Background task to call cleanup API internally
 @app.on_event("startup")
 async def schedule_cleanup():
     try:
@@ -35,12 +35,15 @@ async def schedule_cleanup():
         print(f"Failed to read config for cleanup schedule: {e}")
         interval = 10
 
+    client = TestClient(app)
+
     async def call_cleanup_loop():
+        await asyncio.sleep(5)  # Give FastAPI time to finish startup
         while True:
             try:
-                print("🔄 Triggering periodic cleanup...")
-                response = requests.post("http://localhost:8000/internal/clean_upload_dirs/")
-                if response.ok:
+                print("🔄 Calling cleanup internally...")
+                response = client.post("/internal/clean_upload_dirs/")
+                if response.status_code == 200:
                     print("✅ Cleanup successful.")
                 else:
                     print(f"❌ Cleanup failed: {response.status_code} - {response.text}")
