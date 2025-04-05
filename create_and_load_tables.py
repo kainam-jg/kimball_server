@@ -87,6 +87,8 @@ async def create_and_load_tables(data: TableData, auth: bool = Depends(verify_au
             unique_tables = list(set(table_names))
             tables.append(unique_tables[0])
             filenames.append(filename)
+        logger.info(f"{tables}")
+        logger.info(f"{filenames}")    
         update_query = f"""
             ALTER TABLE default.file_upload_log 
             UPDATE 
