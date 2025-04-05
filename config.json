@@ -8,6 +8,7 @@
       "password": "",
       "database": "default"
     },
+    "cleanup_interval_minutes": 10,
     "DEBUG": true
   }
   
