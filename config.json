@@ -9,6 +9,7 @@
       "database": "default"
     },
     "cleanup_interval_minutes": 5,
+    "SSL": true,
     "DEBUG": false
   }
   
