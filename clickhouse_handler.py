@@ -45,7 +45,7 @@ CLIENT_FLAGS += ["--host", CH_HOST]
 if CH_USER:
     CLIENT_FLAGS += ["--user", CH_USER]
 if CH_PASS:
-    CLIENT_FLAGS += ["--password", CH_PASS]
+    CLIENT_FLAGS += ["--password", f'"{CH_PASS}"']
 
 # Define all functions
 def run_clickhouse_query(query: str):
