@@ -38,10 +38,7 @@ if CH_USER:
     CLIENT_FLAGS += ["--user", CH_USER]
 if CH_PASS:
     CLIENT_FLAGS += ["--password", f"'{CH_PASS}'"]
-if CH_SSL:
-    CLIENT_FLAGS += ["--port", "9440", "--secure"]
-else:
-    CLIENT_FLAGS += ["--port", str(CH_PORT)]
+CLIENT_FLAGS += ["--port", "9440", "--secure"]
 CLIENT_FLAGS += ["--host", CH_HOST]
 
 # Define all functions
