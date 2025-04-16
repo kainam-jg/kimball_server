@@ -37,7 +37,7 @@ CLIENT_FLAGS = ["clickhouse-client"]
 if CH_USER:
     CLIENT_FLAGS += ["--user", CH_USER]
 if CH_PASS:
-    CLIENT_FLAGS += ["--password", f"'{CH_PASS}'"]
+    CLIENT_FLAGS += ["--password", CH_PASS]
 CLIENT_FLAGS += ["--port", "9440", "--secure"]
 CLIENT_FLAGS += ["--host", CH_HOST]
 
@@ -45,7 +45,19 @@ CLIENT_FLAGS += ["--host", CH_HOST]
 def run_clickhouse_query(query: str):
     try:
         full_cmd = CLIENT_FLAGS + ["-q", query]
-        logger.info(f"Running ClickHouse command: {' '.join(full_cmd)}")
+        # Log the exact command that would work on command line
+        cmd_str = ' '.join([
+            'clickhouse-client',
+            f"--user {CH_USER}",
+            f"--password '{CH_PASS}'",  # Note the single quotes around password
+            "--port 9440",
+            "--secure",
+            f"--host {CH_HOST}",
+            "-q",
+            f'"{query}"'  # Quote the query
+        ])
+        logger.info(f"Full command line: {cmd_str}")
+        
         result = run(full_cmd, text=True, capture_output=True)
         if result.returncode != 0:
             logger.error(f"ClickHouse command failed: {result.stderr}")
