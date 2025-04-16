@@ -12,13 +12,14 @@ formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
+# First load config
 try:
     with open(CONFIG_FILE, "r", encoding="utf-8") as f:
         config = json.load(f)
-    ensure_upload_log_table_exists()
 except Exception as e:
-    raise RuntimeError(f"Failed to initialize: {e}")
+    raise RuntimeError(f"Failed to load config.json: {e}")
 
+# Set up configuration variables
 CH = config.get("clickhouse", {})
 CH_DB = CH.get("database", "default")
 CH_HOST = CH.get("host", "localhost")
@@ -46,7 +47,7 @@ if CH_USER:
 if CH_PASS:
     CLIENT_FLAGS += ["--password", CH_PASS]
 
-
+# Define all functions
 def run_clickhouse_query(query: str):
     try:
         full_cmd = CLIENT_FLAGS + ["-q", query]
@@ -55,10 +56,45 @@ def run_clickhouse_query(query: str):
         if result.returncode != 0:
             logger.error(f"ClickHouse command failed: {result.stderr}")
             raise Exception(f"ClickHouse command failed: {result.stderr}")
+        return result
     except CalledProcessError as e:
         logger.error(f"Subprocess error: {str(e)}")
         raise
 
+def ensure_upload_log_table_exists():
+    """
+    Check if file_upload_log table exists and create it if it doesn't.
+    """
+    check_query = f"""
+        EXISTS TABLE {CH_DB}.file_upload_log
+        FORMAT TabSeparated
+    """
+    
+    try:
+        result = run_clickhouse_query(check_query)
+        exists = result.stdout.strip() == "1"
+        
+        if not exists:
+            logger.info("file_upload_log table not found. Creating...")
+            create_query = """
+                CREATE TABLE IF NOT EXISTS file_upload_log (
+                    session_token String,
+                    start_time DateTime DEFAULT now(),
+                    end_time Nullable(DateTime),
+                    cleanup_time Nullable(DateTime),
+                    table_names Array(String),
+                    file_names Array(String)
+                ) ENGINE = MergeTree()
+                ORDER BY (session_token)
+            """
+            run_clickhouse_query(create_query)
+            logger.info("✅ Successfully created file_upload_log table")
+        else:
+            logger.info("✅ file_upload_log table exists")
+            
+    except Exception as e:
+        logger.error(f"❌ Failed to check/create file_upload_log table: {e}")
+        raise
 
 def load_csv_into_table(file_path: str, table_name: str):
     load_cmd = f'"INSERT INTO {table_name} FORMAT CSVWithNames" < "{file_path}"'
@@ -167,38 +203,9 @@ def delete_upload_dir(upload_dir: str, session_token: str) -> bool:
         logger.error(f"Failed to delete directory for session {session_token}: {e}")
         return False
 
-
-def ensure_upload_log_table_exists():
-    """
-    Check if file_upload_log table exists and create it if it doesn't.
-    """
-    check_query = f"""
-        EXISTS TABLE {CH_DB}.file_upload_log
-        FORMAT TabSeparated
-    """
-    
-    try:
-        result = run_clickhouse_query(check_query)
-        exists = result.stdout.strip() == "1"
-        
-        if not exists:
-            logger.info("file_upload_log table not found. Creating...")
-            create_query = """
-                CREATE TABLE IF NOT EXISTS file_upload_log (
-                    session_token String,
-                    start_time DateTime DEFAULT now(),
-                    end_time Nullable(DateTime),
-                    cleanup_time Nullable(DateTime),
-                    table_names Array(String),
-                    file_names Array(String)
-                ) ENGINE = MergeTree()
-                ORDER BY (session_token)
-            """
-            run_clickhouse_query(create_query)
-            logger.info("✅ Successfully created file_upload_log table")
-        else:
-            logger.info("✅ file_upload_log table exists")
-            
-    except Exception as e:
-        logger.error(f"❌ Failed to check/create file_upload_log table: {e}")
-        raise
+# Finally, initialize the table
+try:
+    ensure_upload_log_table_exists()
+except Exception as e:
+    logger.error(f"Failed to initialize upload_log table: {e}")
+    raise RuntimeError(f"Failed to initialize: {e}")

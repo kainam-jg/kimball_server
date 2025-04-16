@@ -19,21 +19,31 @@ logger.addHandler(file_handler)
 async def clean_upload_dirs():
     try:
         session_tokens, upload_dir = get_stale_sessions()
+        if not upload_dir:
+            logger.error("Upload directory not configured")
+            raise HTTPException(status_code=500, detail="Upload directory not configured")
+            
         logger.info(f"Found {len(session_tokens)} session(s) to clean up:")
         for token in session_tokens:
             logger.info(f"  - {token}")
 
         deleted = []
+        failed = []  # Track failed deletions
         for token in session_tokens:
             success = delete_upload_dir(upload_dir, token)
             if success:
                 deleted.append(token)
                 logger.info(f"✅ Deleted: {os.path.join(upload_dir, token)}")
             else:
+                failed.append(token)
                 logger.warning(f"⚠️ Could not delete: {os.path.join(upload_dir, token)}")
 
-        logger.info(f"Cleanup complete. Deleted sessions: {deleted}")
-        return {"deleted_sessions": deleted}
+        logger.info(f"Cleanup complete. Deleted: {len(deleted)}, Failed: {len(failed)}")
+        return {
+            "deleted_sessions": deleted,
+            "failed_sessions": failed,
+            "total_processed": len(session_tokens)
+        }
 
     except Exception as e:
         logger.error(f"❌ Exception during cleanup: {str(e)}")
