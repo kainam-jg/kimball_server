@@ -59,7 +59,7 @@ def log_to_clickhouse(query: str):
             'clickhouse-client',
             f"--user {CH_USER}",
             f"--password '{CH_PASS}'",  # Note the single quotes around password
-            "--port 9440",
+            f"--port {CH_PORT}",
             "--secure",
             f"--host {CH_HOST}",
             "-q",
@@ -85,10 +85,10 @@ def load_to_clickhouse(query: str):
             'clickhouse-client',
             f"--user {CH_USER}",
             f"--password '{CH_PASS}'",  # Note the single quotes around password
-            "--port 9440",
+            f"--port {CH_PORT}",
             "--secure",
             f"--host {CH_HOST}",
-            "--query={query}"
+            "--query="+query
         ])
         logger.info(f"🛠️ Executing ClickHouse load command: {cmd}")
         process = subprocess.run(cmd, shell=True, text=True, capture_output=True)
