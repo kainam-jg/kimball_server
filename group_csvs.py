@@ -6,7 +6,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from fastapi import APIRouter, Depends, HTTPException, Query
 from config import get_upload_dir, verify_auth, is_debug
 
-
 router = APIRouter()
 
 LOG_FILE = "logs/group_csvs.log"

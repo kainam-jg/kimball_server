@@ -27,7 +27,6 @@ CH_USER = CH.get("username", "default")
 CH_PASS = CH.get("password", "")
 CH_SSL = CH.get("SSL", False)
 CH_SSL_CERT = CH.get("cert_file", "")
-#UPLOAD_DIR = config.get("UPLOAD_DIR", "")
 
 if not API_TOKEN or not UPLOAD_ROOT:
     raise ValueError("Missing required configurations in config.json")
@@ -72,7 +71,7 @@ def log_to_clickhouse(query: str):
         if process.returncode != 0:
             logger.error(f"❌ ClickHouse log failed: {process.stderr}")
         else:
-            logger.info("✅ ClickHouse log successful.")
+            logger.info(f"✅ ClickHouse log successful. {cmd}")
 
     except subprocess.CalledProcessError as e:
         logger.error(f"❌ ClickHouse logging exception: {e}")
