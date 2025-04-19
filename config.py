@@ -88,14 +88,13 @@ def load_to_clickhouse(query: str):
             "--port 9440",
             "--secure",
             f"--host {CH_HOST}",
-            "--query=",
-            f'"{query}"'  # Quote the query
+            "--query={query}"
         ])
-        logger.info(f"🛠️ Executing ClickHouse log command: {cmd}")
+        logger.info(f"🛠️ Executing ClickHouse load command: {cmd}")
         process = subprocess.run(cmd, shell=True, text=True, capture_output=True)
 
         if process.returncode != 0:
-            logger.error(f"❌ ClickHouse log failed: {process.stderr}")
+            logger.error(f"❌ ClickHouse log failed: {process.stderr} {cmd}")
         else:
             logger.info(f"✅ ClickHouse log successful. {cmd}")
 

@@ -67,7 +67,7 @@ async def create_and_load_tables(data: TableData, auth: bool = Depends(verify_au
 
                 load_cmd = f'"INSERT INTO {table_name} FORMAT CSVWithNames" < "{file_path}"'
                 logger.info(f"📤 Loading {filename} into {table_name}...")
-                logger.info(f"🛠️ Executing load command: {load_cmd}")
+                #logger.info(f"🛠️ Executing load command: {load_cmd}")
 
                 #process = subprocess.run(load_cmd, shell=True, text=True, capture_output=True)
                 load_to_clickhouse(load_cmd)
