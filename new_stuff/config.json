@@ -2,13 +2,15 @@
     "API_TOKEN": "r_mKmvKvsqvZncXY7-XoVzRIeBaXiKypxe6AyRR8xO8",
     "UPLOAD_DIR": "/opt/kimball/uploads",
     "clickhouse": {
-      "host": "localhost",
+      "host": "127.0.0.1",
       "port": 9440,
       "username": "default",
       "password": "K@!n@m2023!",
-      "database": "default"
+      "database": "default",
+      "cert_file": "/etc/clickhouse-server/certs/chnode1.crt"
     },
     "cleanup_interval_minutes": 5,
-    "DEBUG": false
+    "SSL": true,
+    "DEBUG": true
   }
   
