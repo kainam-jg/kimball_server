@@ -56,8 +56,6 @@ def log_to_clickhouse(query: str):
     try:
         # Escape quotes inside query
         escaped_query = query.replace('"', '\\"')
-        #cmd = f'clickhouse-client -q "{escaped_query}"'
-        #md = f'clickhouse-client --host {CH_HOST} --port {CH_PORT} --user {CH_USER} --password {CH_PASS} -q "{escaped_query}"'
         cmd = ' '.join([
             'clickhouse-client',
             f"--user {CH_USER}",
