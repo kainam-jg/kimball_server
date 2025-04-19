@@ -6,7 +6,7 @@ from typing import List
 from collections import defaultdict
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
-from config import verify_auth, get_upload_dir, log_to_clickhouse
+from config import verify_auth, get_upload_dir, log_to_clickhouse, load_to_clickhouse
 
 router = APIRouter()
 
@@ -46,7 +46,6 @@ async def create_and_load_tables(data: TableData, auth: bool = Depends(verify_au
             drop_query = f"DROP TABLE IF EXISTS {table_name};"
             create_query = f"CREATE TABLE {table_name} (" + ", ".join([f'\"{col}\" String' for col in headers]) + ") ENGINE = MergeTree() ORDER BY tuple();"
 
-
             try:
                 #subprocess.run(["clickhouse-client", "-q", drop_query], check=True)
                 log_to_clickhouse(drop_query)
@@ -66,12 +65,12 @@ async def create_and_load_tables(data: TableData, auth: bool = Depends(verify_au
                     logger.error(f"❌ File not found: {file_path}")
                     raise HTTPException(status_code=404, detail=f"File not found: {filename}")
 
-                load_cmd = f'clickhouse-client -q "INSERT INTO {table_name} FORMAT CSVWithNames" < "{file_path}"'
+                load_cmd = f'"INSERT INTO {table_name} FORMAT CSVWithNames" < "{file_path}"'
                 logger.info(f"📤 Loading {filename} into {table_name}...")
                 logger.info(f"🛠️ Executing load command: {load_cmd}")
 
                 #process = subprocess.run(load_cmd, shell=True, text=True, capture_output=True)
-                log_to_clickhouse(load_cmd)
+                load_to_clickhouse(load_cmd)
 
                 #if process.returncode != 0:
                 #    logger.error(f"❌ Failed to load {filename}: {process.stderr}")

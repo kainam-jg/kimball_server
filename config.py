@@ -75,3 +75,29 @@ def log_to_clickhouse(query: str):
 
     except subprocess.CalledProcessError as e:
         logger.error(f"❌ ClickHouse logging exception: {e}")
+
+def load_to_clickhouse(query: str):
+    """Execute a ClickHouse INSERT or UPDATE using clickhouse-client."""
+    try:
+        # Escape quotes inside query
+        #escaped_query = query.replace('"', '\\"')
+        cmd = ' '.join([
+            'clickhouse-client',
+            f"--user {CH_USER}",
+            f"--password '{CH_PASS}'",  # Note the single quotes around password
+            "--port 9440",
+            "--secure",
+            f"--host {CH_HOST}",
+            "--query=",
+            f'"{query}"'  # Quote the query
+        ])
+        logger.info(f"🛠️ Executing ClickHouse log command: {cmd}")
+        process = subprocess.run(cmd, shell=True, text=True, capture_output=True)
+
+        if process.returncode != 0:
+            logger.error(f"❌ ClickHouse log failed: {process.stderr}")
+        else:
+            logger.info(f"✅ ClickHouse log successful. {cmd}")
+
+    except subprocess.CalledProcessError as e:
+        logger.error(f"❌ ClickHouse logging exception: {e}")
