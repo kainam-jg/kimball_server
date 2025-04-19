@@ -10,7 +10,8 @@ from config import verify_auth, get_upload_dir, log_to_clickhouse, load_to_click
 
 router = APIRouter()
 
-LOG_FILE = "logs/create_and_load_tables.log"
+# Use the same log file as upload_handler.py
+LOG_FILE = "logs/upload.log"
 os.makedirs("logs", exist_ok=True)
 
 logger = logging.getLogger("create_and_load_tables")

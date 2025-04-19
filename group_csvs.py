@@ -8,7 +8,8 @@ from config import get_upload_dir, verify_auth, is_debug
 
 router = APIRouter()
 
-LOG_FILE = "logs/group_csvs.log"
+# Use the same log file as upload_handler.py
+LOG_FILE = "logs/upload.log"
 os.makedirs("logs", exist_ok=True)
 
 logger = logging.getLogger("group_csvs")
