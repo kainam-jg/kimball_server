@@ -3,7 +3,8 @@
   "UPLOAD_DIR": "/opt/kimball/uploads",
   "clickhouse": {
     "host": "127.0.0.1",
-    "port": 9440,
+    "ssl_port": 9440,
+    "https_port": 8443,
     "username": "default",
     "password": "K@!n@m2023!",
     "database": "default",

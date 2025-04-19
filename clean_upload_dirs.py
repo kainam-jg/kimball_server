@@ -1,21 +1,7 @@
 import os
 import json
 import shutil
-import requests
-import logging
-from fastapi import APIRouter, HTTPException
-
-router = APIRouter()
-
-# Setup logging
-LOG_FILE = "logs/clean_upload_dirs.log"
-os.makedirs("logs", exist_ok=True)
-logger = logging.getLogger("clean_upload_dirs")
-logger.setLevel(logging.INFO)
-file_handler = logging.FileHandler(LOG_FILE)
-formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
+import clickhouse_connect
 
 CONFIG_FILE = "config.json"
 
@@ -29,49 +15,32 @@ UPLOAD_DIR = config.get("UPLOAD_DIR")
 CH_CONFIG = config.get("clickhouse", {})
 CLICKHOUSE_DB = CH_CONFIG.get("database", "default")
 CLICKHOUSE_HOST = CH_CONFIG.get("host", "localhost")
-CLICKHOUSE_PORT = CH_CONFIG.get("port", 8123)
+CLICKHOUSE_PORT = CH_CONFIG.get("https_port", 8443)
 CLICKHOUSE_USER = CH_CONFIG.get("username", "default")
 CLICKHOUSE_PASS = CH_CONFIG.get("password", "")
+CLICKHOUSE_CERT = CH_CONFIG.get("cert_file", "")
 
-@router.post("/clean_upload_dirs/")
-async def clean_upload_dirs():
-    if not UPLOAD_DIR:
-        logger.error("UPLOAD_DIR not configured")
-        raise HTTPException(status_code=500, detail="UPLOAD_DIR not configured")
-
-    url = f"http://{CLICKHOUSE_HOST}:{CLICKHOUSE_PORT}/"
-    query = f"""
-        SELECT DISTINCT session_token
-        FROM {CLICKHOUSE_DB}.file_upload_log
-        WHERE end_time IS NOT NULL
-          AND end_time <= now() - INTERVAL 1 MINUTE
-    """
-
-    auth = (CLICKHOUSE_USER, CLICKHOUSE_PASS) if CLICKHOUSE_USER or CLICKHOUSE_PASS else None
-
-    try:
-        response = requests.post(url, params={"database": CLICKHOUSE_DB}, data=query, auth=auth)
-        response.raise_for_status()
-        session_tokens = [line.strip() for line in response.text.split("\n") if line.strip()]
-        logger.info(f"Found {len(session_tokens)} session(s) to clean up:")
-        for token in session_tokens:
-            logger.info(f"  - {token}")
-    except Exception as e:
-        logger.error(f"ClickHouse query failed: {e}")
-        raise HTTPException(status_code=500, detail=f"ClickHouse query failed: {e}")
-
-    deleted = []
-    for token in session_tokens:
-        session_path = os.path.join(UPLOAD_DIR, token)
-        if os.path.isdir(session_path):
-            try:
-                shutil.rmtree(session_path)
-                deleted.append(token)
-                logger.info(f"✅ Deleted: {session_path}")
-            except Exception as e:
-                logger.error(f"❌ Failed to delete {session_path}: {e}")
+try:
+    client = clickhouse_connect.get_client(
+        host=CLICKHOUSE_HOST,
+        port=CLICKHOUSE_PORT,
+        username=CLICKHOUSE_USER,
+        password=CLICKHOUSE_PASS,
+        database=CLICKHOUSE_DB,
+        secure=True,
+        verify=CLICKHOUSE_CERT
+    )
+    
+    qry = f"SELECT DISTINCT session_token FROM file_upload_log WHERE end_time IS NOT NULL AND end_time <= now() - INTERVAL 1 MINUTE"
+    result = client.query(qry)
+    for row in result.result_rows:
+        user_dir = row[0]
+        user_dir_path = os.path.join(UPLOAD_DIR, user_dir)
+        if os.path.exists(user_dir_path):
+            shutil.rmtree(user_dir_path)
+            print(f"Deleted directory: {user_dir_path}")
         else:
-            logger.warning(f"⚠️ Not found or not a directory: {session_path}")
-
-    logger.info(f"Cleanup complete. Deleted sessions: {deleted}")
-    return {"deleted_sessions": deleted}
+            print(f"Directory not found: {user_dir_path}")
+    
+except Exception as e:
+    print("Connection failed:", str(e))
