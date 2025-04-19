@@ -1,14 +1,16 @@
 {
-    "API_TOKEN": "r_mKmvKvsqvZncXY7-XoVzRIeBaXiKypxe6AyRR8xO8",
-    "UPLOAD_DIR": "/opt/kimball/uploads",
-    "clickhouse": {
-      "host": "localhost",
-      "port": 9440,
-      "username": "default",
-      "password": "K@!n@m2023!",
-      "database": "default"
-    },
-    "cleanup_interval_minutes": 5,
-    "DEBUG": false
-  }
+  "API_TOKEN": "r_mKmvKvsqvZncXY7-XoVzRIeBaXiKypxe6AyRR8xO8",
+  "UPLOAD_DIR": "/opt/kimball/uploads",
+  "clickhouse": {
+    "host": "127.0.0.1",
+    "port": 9440,
+    "username": "default",
+    "password": "K@!n@m2023!",
+    "database": "default",
+    "cert_file": "/etc/clickhouse-server/certs/chnode1.crt"
+  },
+  "cleanup_interval_minutes": 5,
+  "SSL": true,
+  "DEBUG": true
+}
   
