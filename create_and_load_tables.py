@@ -43,8 +43,8 @@ async def create_and_load_tables(data: TableData, auth: bool = Depends(verify_au
             headers = [h.lstrip("\ufeff") for h in group.headers]  # remove BOM
 
             # Drop table if exists
-            drop_query = f"DROP TABLE IF EXISTS `{table_name}`;"
-            create_query = f"CREATE TABLE `{table_name}` (" + ", ".join([f"`{col}` String" for col in headers]) + ") ENGINE = MergeTree() ORDER BY tuple();"
+            drop_query = f"DROP TABLE IF EXISTS {table_name};"
+            create_query = f"CREATE TABLE {table_name} (" + ", ".join([f"`{col}` String" for col in headers]) + ") ENGINE = MergeTree() ORDER BY tuple();"
 
             try:
                 #subprocess.run(["clickhouse-client", "-q", drop_query], check=True)
