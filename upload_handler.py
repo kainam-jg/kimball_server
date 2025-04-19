@@ -11,6 +11,8 @@ from config import (
     is_debug,
     log_to_clickhouse
 )
+# Import the config 
+
 
 router = APIRouter()
 LOG_FILE = "logs/upload.log"
