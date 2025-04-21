@@ -6,7 +6,7 @@
     "ssl_port": 9440,
     "https_port": 8443,
     "username": "default",
-    "password": "K@!n@m2023!",
+    "password": "Kainam2023",
     "database": "default",
     "cert_file": "/etc/clickhouse-server/certs/chnode1.crt"
   },
